@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>신경조절 2단계 복합 버스트 돔 플리커 (Quest VR) - 자연 만년설 돔</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000002;
+      font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "Segoe UI", sans-serif;
+      user-select: none;
+    }
+    #ui-container {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 480px;
+      max-height: 95vh;
+      overflow-y: auto;
+      background: rgba(10, 16, 26, 0.94);
+      border: 1.5px solid #00b4d8;
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: #e0f0ff;
+      box-shadow: 0 4px 28px rgba(0,0,0,0.85);
+      z-index: 9999;
+    }
+    #ui-container::-webkit-scrollbar { width: 5px; }
+    #ui-container::-webkit-scrollbar-thumb { background: #007799; border-radius: 3px; }
+    
+    .panel-title { margin: 0; font-size: 15px; font-weight: bold; color: #00e5ff; }
+    .panel-subtitle { font-size: 10px; color: #9ab4cc; margin: 4px 0 10px 0; line-height: 1.4; }
+
+    .slider-row { margin-bottom: 10px; font-size: 11px; }
+    .slider-label { display: flex; justify-content: space-between; margin-bottom: 4px; font-weight: bold; color: #d0e4f7; }
+    input[type=range] {
+      width: 100%;
+      height: 6px;
+      accent-color: #00ffc8;
+      background: #1c2838;
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .sec-header { font-size: 11px; font-weight: bold; margin: 8px 0 4px 0; color: #c0d8f0; }
+    .btn-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 4px; }
+    .btn-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 4px; }
+    .btn-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 4px; }
+    .btn-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; margin-bottom: 4px; }
+
+    button {
+      background: #141e2b;
+      border: 1px solid #2e445d;
+      color: #b0c8e0;
+      padding: 5px 2px;
+      font-size: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.1s ease;
+    }
+    button:hover { background: #1c2c40; border-color: #00d4ff; }
+    button.active {
+      background: #0d4a36 !important;
+      border: 1.5px solid #00ffaa !important;
+      color: #ffffff !important;
+      font-weight: bold;
+    }
+
+    .stage-box {
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin: 8px 0;
+    }
+    .p1-box { background: rgba(14, 30, 48, 0.7); border: 1.2px solid #00b4d8; }
+    .p2-box { background: rgba(38, 20, 36, 0.7); border: 1.2px solid #cc4da8; }
+    .pulse-box { background: rgba(22, 38, 28, 0.7); border: 1.2px solid #00ffc8; }
+    .stage-title { font-size: 11px; font-weight: bold; margin-bottom: 6px; }
+    .p1-title { color: #00e5ff; }
+    .p2-title { color: #ff8fe0; }
+    .sub-label { font-size: 10px; color: #9bbcdb; margin: 4px 0 2px 0; }
+
+    #status-display {
+      margin-top: 10px;
+      padding: 8px;
+      background: #0b121c;
+      border: 1px solid #20354b;
+      border-radius: 5px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: #00ffc8;
+    }
+
+    #enter-vr-btn {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #00b4d8, #0077b6);
+      border: 2px solid #00f0ff;
+      border-radius: 30px;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.6);
+      z-index: 10000;
+      transition: all 0.2s;
+    }
+    #enter-vr-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px rgba(0, 255, 200, 0.9);
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- UI 패널 -->
+  <div id="ui-container">
+    <div class="panel-title">신경조절 2단계 복합 버스트 플리커 제어판</div>
+    <div class="panel-subtitle">
+      VR 조작: <b>[썸스틱 앞/뒤]</b> 돔 기준거리 확대/축소<br>
+      트리거: <b>[왼쪽]</b> 축소 | <b>[오른쪽]</b> 확대
+    </div>
+
+    <!-- V1-V5 이글루 원근 변조 (벽돌 30↔33↔37 순환) -->
+    <div class="stage-box pulse-box">
+      <div class="stage-title" style="color: #00ffc8;">◆ V1-V5 자연 만년설 원근 펄스 (벽돌 30↔33↔37 순환)</div>
+      <div class="btn-grid-2">
+        <button id="btn-pulse-toggle" class="active" onclick="togglePulse()">원근 왕복 모드: 켜짐</button>
+        <button id="btn-brick-status" style="pointer-events: none; border-color: #00ffc8; color: #00ffc8;">현재 벽돌: 33.0개</button>
+      </div>
+      <div class="sub-label">순환 속도 (1사이클 완료 시간):</div>
+      <div class="btn-grid-4" id="pulse-speed-group"></div>
+    </div>
+
+    <!-- 1. 한 시퀀스 후 휴식 대기 슬라이더 -->
+    <div class="slider-row">
+      <div class="slider-label">
+        <span>○ 한 시퀀스 후 휴식 대기 (OFF):</span>
+        <span id="txt-off">3.0초</span>
+      </div>
+      <input type="range" id="slider-off" min="0.5" max="8.0" step="0.5" value="3.0">
+    </div>
+
+    <!-- 돔 기본 반경 및 만년설 톤 슬라이더 -->
+    <div class="slider-row" style="background: rgba(20,32,48,0.5); padding: 8px; border-radius: 6px; border: 1px solid #1c3552;">
+      <div class="slider-label">
+        <span>기준 돔 직경/반경 (Distance):</span>
+        <span id="txt-radius">25m</span>
+      </div>
+      <input type="range" id="slider-radius" min="5" max="80" step="1" value="25">
+
+      <div class="slider-label" style="margin-top: 6px;">
+        <span>만년설 기본 채광 밝기 (Ambient):</span>
+        <span id="txt-bg">100%</span>
+      </div>
+      <input type="range" id="slider-bg" min="60" max="140" step="5" value="100">
+    </div>
+
+    <!-- 2. 다크 테마 (1~10) -->
+    <div class="sec-header">다크 테마 (1~10):</div>
+    <div class="btn-grid-5" id="group-dark-1"></div>
+    <div class="btn-grid-5" id="group-dark-2"></div>
+
+    <!-- 3. 화이트 A 폴리시드 메탈릭 (11~16) -->
+    <div class="sec-header" style="color: #ffe07a;">화이트 A 폴리시드 메탈릭 (11~16):</div>
+    <div class="btn-grid-3" id="group-wha-1"></div>
+    <div class="btn-grid-3" id="group-wha-2"></div>
+
+    <!-- 4. 화이트 B 하이브리드 진정형 (17~20) -->
+    <div class="sec-header" style="color: #ff9ee2;">화이트 B 하이브리드 진정형 (17~20):</div>
+    <div class="btn-grid-2" id="group-whb-1"></div>
+    <div class="btn-grid-2" id="group-whb-2"></div>
+
+    <!-- 5. 1단계(전반부) 프라이밍 박스 -->
+    <div class="stage-box p1-box">
+      <div class="stage-title p1-title" id="p1-header-title">● 1단계(전반부) 프라이밍: 0.2% | 1.0Hz | 2회 깜빡임</div>
+      
+      <div class="sub-label">1-1. 픽셀 비율:</div>
+      <div class="btn-grid-5" id="p1-blur-group"></div>
+
+      <div class="sub-label">1-2. 주파수:</div>
+      <div class="btn-grid-4" id="p1-freq-group"></div>
+
+      <div class="sub-label">1-3. 반복 횟수:</div>
+      <div class="btn-grid-4" id="p1-count-group"></div>
+    </div>
+
+    <!-- 6. 2단계(후반부) 고속 버스트 박스 -->
+    <div class="stage-box p2-box">
+      <div class="stage-title p2-title" id="p2-header-title">★ 2단계(후반부) 고속 버스트: 0.4% | 2.0Hz | 5회 깜빡임</div>
+      
+      <div class="sub-label">2-1. 픽셀 비율:</div>
+      <div class="btn-grid-5" id="p2-blur-group"></div>
+
+      <div class="sub-label">2-2. 주파수:</div>
+      <div class="btn-grid-4" id="p2-freq-group"></div>
+
+      <div class="sub-label">2-3. 반복 횟수:</div>
+      <div class="btn-grid-4" id="p2-count-group"></div>
+    </div>
+
+    <!-- 7. 우세안 & 흑백 변환 -->
+    <div class="btn-grid-2" style="margin-top: 8px;">
+      <button id="btn-eye-left" onclick="setDominantEye('left')">좌안(Left) 선명</button>
+      <button id="btn-eye-right" class="active" onclick="setDominantEye('right')">우안(Right) 선명</button>
+    </div>
+    <div style="margin-top: 4px;">
+      <button id="btn-grayscale" style="width: 100%; padding: 6px;" onclick="toggleGrayscale()">Rec.709 흑백(Grayscale) 모드: 꺼짐</button>
+    </div>
+
+    <!-- 8. 선명도 격차 (6단계) -->
+    <div class="sec-header" id="sharpness-title">선명도 격차: 3단계: 표준 권장 차이 (Standard)</div>
+    <div class="btn-grid-3" id="sharp-group-1"></div>
+    <div class="btn-grid-3" id="sharp-group-2"></div>
+
+    <div id="status-display">[준비 완료] VR 진입 또는 PC에서 확인 가능합니다.</div>
+  </div>
+
+  <button id="enter-vr-btn">ENTER VR (퀘스트 실행)</button>
+
+  <script>
+    // ---------------- 1. 테마 데이터베이스 ----------------
+    const COLOR_SETS = {
+      1:  { name: "D-1", a: [0.20, 1.0, 0.38], b: [1.0, 0.12, 0.68], metal: false },
+      2:  { name: "D-2", a: [0.98, 0.24, 0.08], b: [0.94, 0.76, 0.22], metal: false },
+      3:  { name: "D-3", a: [0.0, 0.94, 1.0], b: [1.0, 0.0, 0.70], metal: false },
+      4:  { name: "D-4", a: [0.06, 0.92, 0.51], b: [1.0, 0.68, 0.08], metal: false },
+      5:  { name: "D-5", a: [0.55, 0.18, 1.0], b: [0.70, 1.0, 0.12], metal: false },
+      6:  { name: "D-6", a: [0.31, 0.78, 1.0], b: [1.0, 0.39, 0.23], metal: false },
+      7:  { name: "D-7", a: [0.0, 1.0, 0.75], b: [0.90, 0.27, 0.78], metal: false },
+      8:  { name: "D-8", a: [0.12, 0.55, 1.0], b: [1.0, 0.84, 0.0], metal: false },
+      9:  { name: "D-9", a: [0.25, 1.0, 0.63], b: [1.0, 0.16, 0.35], metal: false },
+      10: { name: "D-10", a: [0.68, 0.31, 1.0], b: [0.16, 0.90, 0.78], metal: false },
+
+      11: { name: "W-A 11", a: [0.06, 0.45, 0.51], b: [0.96, 0.72, 0.12], metal: true },
+      12: { name: "W-A 12", a: [0.14, 0.29, 0.45], b: [0.88, 0.41, 0.33], metal: true },
+      13: { name: "W-A 13", a: [0.08, 0.43, 0.27], b: [0.86, 0.68, 0.14], metal: true },
+      14: { name: "W-A 14", a: [0.16, 0.24, 0.53], b: [0.92, 0.57, 0.12], metal: true },
+      15: { name: "W-A 15", a: [0.45, 0.16, 0.41], b: [0.70, 0.66, 0.18], metal: true },
+      16: { name: "W-A 16", a: [0.07, 0.38, 0.42], b: [0.90, 0.37, 0.14], metal: true },
+
+      17: { name: "W-B 17번", a: [0.37, 0.27, 0.57], b: [0.82, 0.49, 0.54], metal: "hybrid" },
+      18: { name: "W-B 18번", a: [0.15, 0.23, 0.35], b: [0.51, 0.72, 0.61], metal: "hybrid" },
+      19: { name: "W-B 19번", a: [0.20, 0.37, 0.24], b: [0.49, 0.66, 0.80], metal: "hybrid" },
+      20: { name: "W-B 20번", a: [0.57, 0.29, 0.18], b: [0.68, 0.54, 0.72], metal: "hybrid" }
+    };
+
+    const SHARP_LEVELS = {
+      1: "1단계: 미세한 차이 (Gentle)",
+      2: "2단계: 자연스러운 차이 (Mild)",
+      3: "3단계: 표준 권장 차이 (Standard)",
+      4: "4단계: 뚜렷한 대비 (High)",
+      5: "5단계: 강력한 초고선명 (Ultra)",
+      6: "6단계: 극한 선명도 대비 (Extreme Crisp)"
+    };
+
+    // ---------------- 2. 시스템 상태 파라미터 ----------------
+    const params = {
+      color_set: 17,
+      dome_radius: 25.0, // 기준 반경 (33개 기준)[cite: 1]
+      snow_brightness: 1.0,
+      off_duration: 3.0, //[cite: 1]
+      dominant_eye: "right",
+      grayscale: false,
+      sharpness: 3,
+
+      // 전반부 P1 (0.2%, 1.0Hz, 2회)[cite: 1]
+      p1_blur: 0.2,
+      p1_freq: 1.0,
+      p1_count: 2,
+
+      // 후반부 P2 (0.4%, 2.0Hz, 5회)[cite: 1]
+      p2_blur: 0.4,
+      p2_freq: 2.0,
+      p2_count: 5,
+
+      // V1-V5 자연 만년설 원근 조절 (33 -> 30 -> 33 -> 37 순환)
+      pulse_active: true,
+      pulse_period: 8.0,
+      base_bricks: 33,
+      min_bricks: 30,
+      max_bricks: 37
+    };
+
+    // ---------------- 3. Three.js 엔진 세팅 ----------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000002); // 바닥 및 외부 공간 완전한 칠흑 암흑 보장
+
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 3000);
+    camera.position.set(0, 1.6, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const domeGroup = new THREE.Group();
+    scene.add(domeGroup);
+
+    // ---------------- 4. 맑고 깨끗한 원형 가우시안 글로우 텍스처 ----------------
+    function createPureStarTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+
+      const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');     // 순백 중심광
+      grad.addColorStop(0.20, 'rgba(255, 255, 255, 0.95)');
+      grad.addColorStop(0.50, 'rgba(210, 235, 255, 0.40)');    // 부드러운 하이라이트 번짐
+      grad.addColorStop(0.85, 'rgba(180, 215, 255, 0.08)');
+      grad.addColorStop(1.0, 'rgba(0, 0, 0, 0.0)');
+
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 128, 128);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.generateMipmaps = true;
+      return texture;
+    }
+    const starTexture = createPureStarTexture();
+
+    // ---------------- 5. 내추럴 만년설 설면 노이즈 함수 (자연스러운 눈 둔덕) ----------------
+    function naturalSnowDunes(theta, phi) {
+      // 거대한 완만한 눈 둔덕 (기본 릴리프)
+      const w1 = Math.sin(theta * 3.0 + phi * 2.0) * Math.cos(phi * 4.0);
+      // 바람에 쓸린 사스트루기(Sastrugi) 눈결 굴곡
+      const w2 = Math.sin(theta * 7.0 - phi * 5.0) * Math.cos(theta * 4.0 + phi * 6.0) * 0.4;
+      // 미세 눈가루 텍스처
+      const w3 = Math.cos(theta * 14.0 + phi * 12.0) * 0.15;
+      
+      const combined = (w1 + w2 + w3) / 1.55; // -1.0 ~ +1.0
+      return combined;
+    }
+
+    // ---------------- 6. 진짜 하얀 만년설 돔 & 얇은 파란색 격자 지오메트리 ----------------
+    let snowDomeMesh = null, gridMesh = null;
+    const TOTAL_POINTS = 16000; //[cite: 1]
+    const TOTAL_RINGS = 22;
+
+    function buildDome() {
+      if (snowDomeMesh) domeGroup.remove(snowDomeMesh);
+      if (gridMesh) domeGroup.remove(gridMesh);
+
+      const R = params.dome_radius;
+      const BASE_BRICK_COUNT = params.base_bricks; // 33개 기준
+
+      const snowPositions = [];
+      const snowColors = [];
+      const linePositions = [];
+
+      for (let r = 0; r < TOTAL_RINGS; r++) {
+        const phi0 = (r / TOTAL_RINGS) * (Math.PI * 0.5);
+        const phi1 = ((r + 1) / TOTAL_RINGS) * (Math.PI * 0.5);
+
+        const cos0 = Math.cos(phi0), sin0 = Math.sin(phi0);
+        const cos1 = Math.cos(phi1), sin1 = Math.sin(phi1);
+
+        const midCos = (cos0 + cos1) * 0.5;
+        const numBricks = Math.max(4, Math.round(BASE_BRICK_COUNT * midCos));
+        const staggerOffset = (r % 2) * (Math.PI / numBricks);
+
+        for (let b = 0; b < numBricks; b++) {
+          const theta0 = (b / numBricks) * Math.PI * 2 + staggerOffset;
+          const theta1 = ((b + 1) / numBricks) * Math.PI * 2 + staggerOffset;
+
+          // 4개 코너 지점의 자연 눈 둔덕 높이 및 위치 계산
+          const n0 = naturalSnowDunes(theta0, phi0);
+          const n1 = naturalSnowDunes(theta1, phi0);
+          const n2 = naturalSnowDunes(theta1, phi1);
+          const n3 = naturalSnowDunes(theta0, phi1);
+
+          // 둔덕의 볼록/오목 변위 (자연스러운 지형 굴곡: 최대 35cm 깊이감)
+          const r0_disp = R + n0 * 0.35;
+          const r1_disp = R + n1 * 0.35;
+          const r2_disp = R + n2 * 0.35;
+          const r3_disp = R + n3 * 0.35;
+
+          const p0 = [ r0_disp * cos0 * Math.cos(theta0), r0_disp * sin0, r0_disp * cos0 * Math.sin(theta0) ];
+          const p1 = [ r1_disp * cos0 * Math.cos(theta1), r1_disp * sin0, r1_disp * cos0 * Math.sin(theta1) ];
+          const p2 = [ r2_disp * cos1 * Math.cos(theta1), r2_disp * sin1, r2_disp * cos1 * Math.sin(theta1) ];
+          const p3 = [ r3_disp * cos1 * Math.cos(theta0), r3_disp * sin1, r3_disp * cos1 * Math.sin(theta0) ];
+
+          // 돔 안쪽을 향하는 2개의 삼각형 면
+          snowPositions.push(...p0, ...p1, ...p2);
+          snowPositions.push(...p0, ...p2, ...p3);
+
+          // [핵심]: 만년설 자연 음영 계산 (둔덕 높은 곳 = 순백 #FFFFFF / 둔덕 낮은 골 = 서늘한 빙하 섀도우 #D2E4F0)
+          const calcSnowColor = (noiseVal, phiVal) => {
+            const bright = params.snow_brightness;
+            // 둔덕 높이에 따른 자연광 명암 (0.0 ~ 1.0)
+            const t = (noiseVal + 1.0) * 0.5;
+            
+            // 양지: 순백 화이트 (1.0, 1.0, 1.0)
+            // 음지: 서늘하고 깨끗한 빙하 블루 섀도우 (0.82, 0.89, 0.95)
+            let red   = THREE.MathUtils.lerp(0.82, 1.00, t) * bright;
+            let green = THREE.MathUtils.lerp(0.89, 1.00, t) * bright;
+            let blue  = THREE.MathUtils.lerp(0.95, 1.00, t) * bright;
+
+            // 바닥(phi=0) 부근은 암흑 바닥과 자연스럽게 어우러지도록 살짝 림 페이드
+            if (phiVal < 0.12) {
+              const rimFade = Math.max(0.05, phiVal / 0.12);
+              red *= rimFade; green *= rimFade; blue *= rimFade;
+            }
+
+            return [ Math.min(1.0, red), Math.min(1.0, green), Math.min(1.0, blue) ];
+          };
+
+          const c0 = calcSnowColor(n0, phi0);
+          const c1 = calcSnowColor(n1, phi0);
+          const c2 = calcSnowColor(n2, phi1);
+          const c3 = calcSnowColor(n3, phi1);
+
+          snowColors.push(...c0, ...c1, ...c2);
+          snowColors.push(...c0, ...c2, ...c3);
+
+          // [핵심]: 얇고 섬세한 푸른색 이글루 선분 (설면보다 2cm 안쪽에 띄워 완벽 밀착)
+          const offset = 0.998;
+          const lp0 = [ p0[0]*offset, p0[1]*offset, p0[2]*offset ];
+          const lp1 = [ p1[0]*offset, p1[1]*offset, p1[2]*offset ];
+          const lp2 = [ p2[0]*offset, p2[1]*offset, p2[2]*offset ];
+          const lp3 = [ p3[0]*offset, p3[1]*offset, p3[2]*offset ];
+
+          linePositions.push(...lp0, ...lp1);
+          linePositions.push(...lp3, ...lp2);
+          linePositions.push(...lp0, ...lp3);
+          linePositions.push(...lp0, ...lp2); // 대각선 분할선
+        }
+      }
+
+      // 1) 만년설 설면 메시 (MeshBasicMaterial로 조명 계산 오류 없이 100% 하얗게 발광)
+      const snowGeo = new THREE.BufferGeometry();
+      snowGeo.setAttribute('position', new THREE.Float32BufferAttribute(snowPositions, 3));
+      snowGeo.setAttribute('color', new THREE.Float32BufferAttribute(snowColors, 3));
+      snowGeo.computeVertexNormals();
+
+      const snowMat = new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide, // 앞뒤 모두 렌더링하여 절대 까맣게 사라지지 않음
+        depthWrite: false
+      });
+      snowDomeMesh = new THREE.Mesh(snowGeo, snowMat);
+      domeGroup.add(snowDomeMesh);
+
+      // 2) 얇고 섬세한 파란색 사각형 및 대각선 그리드
+      const gridGeo = new THREE.BufferGeometry();
+      gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+      const gridMat = new THREE.LineBasicMaterial({
+        color: 0x0077c8,       // 맑고 선명한 크리스털 블루
+        transparent: true,
+        opacity: 0.28,         // 은은하고 가늘게 얹히는 자연스러운 두께감
+        depthWrite: false
+      });
+      gridMesh = new THREE.LineSegments(gridGeo, gridMat);
+      domeGroup.add(gridMesh);
+
+      rebuildParticles();
+    }
+
+    // ---------------- 7. 만년설 설면 밀착 보석 플리커 파티클 시스템 ----------------
+    let pointsMesh = null;
+    let pointData = [];
+    let p1_indices = [];
+    let p2_indices = [];
+
+    function rebuildParticles() {
+      pointData = [];
+      const R = params.dome_radius;
+
+      for (let i = 0; i < TOTAL_POINTS; i++) { //[cite: 1]
+        const u = Math.random(); //[cite: 1]
+        const v = Math.random(); //[cite: 1]
+        const theta = u * 2.0 * Math.PI; //[cite: 1]
+        const phi = Math.asin(v * 0.98); //[cite: 1]
+
+        const dirX = Math.cos(phi) * Math.cos(theta);
+        const dirY = Math.sin(phi);
+        const dirZ = Math.cos(phi) * Math.sin(theta);
+
+        // 설면 둔덕 굴곡 높이에 완벽히 밀착 (약 1.5cm 살짝 돌출되어 보석처럼 반짝임)
+        const n = naturalSnowDunes(theta, phi);
+        const surfaceR = (R + n * 0.35) * 0.995;
+
+        const x = surfaceR * dirX;
+        const y = surfaceR * dirY;
+        const z = surfaceR * dirZ;
+
+        const phase = (i % 2 === 0) ? 1.0 : -1.0; //[cite: 1]
+        const seed = Math.random(); //[cite: 1]
+        pointData.push({ x, y, z, phase, seed });
+      }
+
+      const count1 = Math.max(10, Math.floor(TOTAL_POINTS * (params.p1_blur / 100.0))); //[cite: 1]
+      const count2 = Math.max(15, Math.floor(TOTAL_POINTS * (params.p2_blur / 100.0))); //[cite: 1]
+
+      p1_indices = [];
+      p2_indices = [];
+      for (let i = 0; i < count1; i++) p1_indices.push(i); //[cite: 1]
+      for (let i = 0; i < count2; i++) p2_indices.push(i); //[cite: 1]
+
+      if (pointsMesh) scene.remove(pointsMesh);
+
+      const maxCount = Math.max(count1, count2); //[cite: 1]
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxCount * 3), 3)); //[cite: 1]
+      geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(maxCount * 3), 3)); //[cite: 1]
+
+      // 잘림/먹물 번짐 현상이 없는 최적 직경(0.75m)과 원형 가우시안 텍스처
+      const mat = new THREE.PointsMaterial({
+        size: 0.75,                  // 설면 위에 꼭 들어맞는 맑고 섬세한 보석 크기
+        sizeAttenuation: true,       // 원근 팽창(Optic Expansion) 보장
+        map: starTexture,            // 원형 가우시안 텍스처
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.98,
+        blending: THREE.NormalBlending, // 색상 백화 및 검은 먹물 왜곡 원천 방지
+        depthWrite: false,
+        depthTest: false             // 벽면에 묻히거나 반쪽으로 잘리는 현상 완전 차단
+      });
+
+      pointsMesh = new THREE.Points(geo, mat);
+      scene.add(pointsMesh);
+    }
+
+    buildDome();
+
+    // ---------------- 8. WebXR 세션 및 VR 컨트롤러 ----------------
+    const enterBtn = document.getElementById('enter-vr-btn');
+    let currentSession = null;
+
+    if ('xr' in navigator) {
+      navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+        if (supported) enterBtn.style.display = 'block';
+        else enterBtn.innerText = 'VR 모드 미지원 (PC 프리뷰 모드)';
+      }).catch(() => {
+        enterBtn.innerText = 'VR 감지 실패 (PC 모드 작동)';
+      });
+    }
+
+    enterBtn.addEventListener('click', () => {
+      if (!currentSession) {
+        navigator.xr.requestSession('immersive-vr', {
+          optionalFeatures: ['local-floor', 'bounded-floor']
+        }).then(onSessionStarted).catch((err) => {
+          alert("VR 세션 시작 실패: " + err.message);
+        });
+      } else {
+        currentSession.end();
+      }
+    });
+
+    function onSessionStarted(session) {
+      currentSession = session;
+      renderer.xr.setSession(session);
+      enterBtn.innerText = 'EXIT VR';
+
+      session.addEventListener('end', () => {
+        currentSession = null;
+        enterBtn.innerText = 'ENTER VR (퀘스트 실행)';
+      });
+    }
+
+    const ctrlRight = renderer.xr.getController(0);
+    const ctrlLeft = renderer.xr.getController(1);
+    scene.add(ctrlRight);
+    scene.add(ctrlLeft);
+
+    let leftDown = false;
+    let rightDown = false;
+
+    ctrlLeft.addEventListener('selectstart', () => { leftDown = true; });
+    ctrlLeft.addEventListener('selectend', () => { leftDown = false; });
+    ctrlRight.addEventListener('selectstart', () => { rightDown = true; });
+    ctrlRight.addEventListener('selectend', () => { rightDown = false; });
+
+    // ---------------- 9. 실시간 렌더 루프 (자연 만년설 원근 모듈레이션) ----------------
+    const clock = new THREE.Clock();
+    const statusBox = document.getElementById('status-display');
+    const brickStatusBtn = document.getElementById('btn-brick-status');
+
+    renderer.setAnimationLoop(() => {
+      const delta = clock.getDelta();
+      const elapsed = clock.getElapsedTime();
+
+      // [오큘러스 썸스틱 전수 감지]
+      let thumbstickY = 0.0;
+      if (currentSession && currentSession.inputSources) {
+        for (let i = 0; i < currentSession.inputSources.length; i++) {
+          const src = currentSession.inputSources[i];
+          if (src && src.gamepad && src.gamepad.axes) {
+            const axes = src.gamepad.axes;
+            if (axes.length >= 4) {
+              if (Math.abs(axes[3]) > 0.08) thumbstickY = axes[3];
+              else if (Math.abs(axes[1]) > 0.08) thumbstickY = axes[1];
+            } else if (axes.length >= 2) {
+              if (Math.abs(axes[1]) > 0.08) thumbstickY = axes[1];
+            }
+          }
+        }
+      }
+
+      let radiusChanged = false;
+      if (Math.abs(thumbstickY) > 0.08) {
+        params.dome_radius -= thumbstickY * 26.0 * delta;
+        params.dome_radius = Math.max(5.0, Math.min(80.0, params.dome_radius));
+        radiusChanged = true;
+      }
+
+      if (leftDown) {
+        params.dome_radius = Math.max(5.0, params.dome_radius - 12.0 * delta);
+        radiusChanged = true;
+      }
+      if (rightDown) {
+        params.dome_radius = Math.min(80.0, params.dome_radius + 12.0 * delta);
+        radiusChanged = true;
+      }
+
+      if (radiusChanged) {
+        document.getElementById('slider-radius').value = params.dome_radius;
+        document.getElementById('txt-radius').innerText = params.dome_radius.toFixed(0) + 'm';
+        buildDome();
+      }
+
+      // [V1-V5 핵심]: 벽돌 33 -> 30(접근/축소) -> 33(제자리) -> 37(멀어짐/확장) 펄스 계산
+      let currentBrickCount = params.base_bricks;
+      let scaleFactor = 1.0;
+
+      if (params.pulse_active) {
+        const pulseT = (elapsed % params.pulse_period) / params.pulse_period;
+        const sinVal = Math.sin(pulseT * Math.PI * 2.0);
+
+        if (sinVal < 0) {
+          // 33개 -> 30개 (만년설 돔이 수축하여 눈앞으로 가깝게 다가옴)
+          currentBrickCount = params.base_bricks + sinVal * (params.base_bricks - params.min_bricks);
+        } else {
+          // 33개 -> 37개 (만년설 돔이 팽창하여 멀리 물러남)
+          currentBrickCount = params.base_bricks + sinVal * (params.max_bricks - params.base_bricks);
+        }
+
+        scaleFactor = currentBrickCount / params.base_bricks;
+        brickStatusBtn.innerText = `현재 벽돌: ${currentBrickCount.toFixed(1)}개 (${(scaleFactor * 100).toFixed(0)}%)`;
+      } else {
+        brickStatusBtn.innerText = `현재 벽돌: 33.0개 (고정)`;
+      }
+
+      // 만년설 돔 및 파란색 그리드 실시간 원근 변조
+      domeGroup.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+      // 시퀀스 타이밍 계산
+      const dur_p1 = params.p1_count / params.p1_freq; //[cite: 1]
+      const dur_p2 = params.p2_count / params.p2_freq; //[cite: 1]
+      const total_stim = dur_p1 + dur_p2; //[cite: 1]
+      const total_cycle = total_stim + params.off_duration; //[cite: 1]
+      const t_cycle = elapsed % total_cycle; //[cite: 1]
+
+      let current_stage = "OFF";
+      let cur_freq = 1.0;
+      let cur_local_t = 0.0;
+      let active_list = [];
+
+      if (t_cycle < dur_p1) {
+        current_stage = "P1";
+        cur_freq = params.p1_freq;
+        cur_local_t = t_cycle;
+        active_list = p1_indices;
+        const rem = (dur_p1 - t_cycle).toFixed(1);
+        statusBox.innerText = `[1단계(전반부) 프라이밍] ${params.p1_blur}% 저밀도 1.0Hz 동조 중... (${rem}초 남음)`;
+        statusBox.style.color = "#00e5ff";
+      } else if (t_cycle < total_stim) {
+        current_stage = "P2";
+        cur_freq = params.p2_freq;
+        cur_local_t = t_cycle - dur_p1;
+        active_list = p2_indices;
+        const rem = (total_stim - t_cycle).toFixed(1);
+        statusBox.innerText = `[2단계(후반부) 고속 버스트] ${params.p2_blur}% 고밀도 2.0Hz 고속 견인 중! (${rem}초 남음)`;
+        statusBox.style.color = "#ff8fe0";
+      } else {
+        current_stage = "OFF";
+        const rem = (total_cycle - t_cycle).toFixed(1);
+        statusBox.innerText = `[휴식 대기 중] 리듬 이완 단계... (${rem}초 남음)`;
+        statusBox.style.color = "#ffc83b";
+      }
+
+      // 별빛 파티클 렌더링 (만년설 설면 굴곡에 완벽히 동기화되어 함께 원근 팽창)
+      if (pointsMesh) {
+        const posAttr = pointsMesh.geometry.attributes.position; //[cite: 1]
+        const colAttr = pointsMesh.geometry.attributes.color; //[cite: 1]
+        const cur_set = COLOR_SETS[params.color_set]; //[cite: 1]
+        const is_metal = cur_set.metal; //[cite: 1]
+        const temporal = Math.sin(cur_local_t * cur_freq * Math.PI * 2.0); //[cite: 1]
+
+        if (current_stage === "OFF") {
+          for (let i = 0; i < posAttr.count; i++) colAttr.setXYZ(i, 0, 0, 0); //[cite: 1]
+        } else {
+          const aLen = active_list.length; //[cite: 1]
+          for (let i = 0; i < posAttr.count; i++) { //[cite: 1]
+            if (i < aLen) {
+              const pt = pointData[active_list[i]]; //[cite: 1]
+
+              // 만년설 설면 팽창 계수에 맞춰 보석 플리커도 정밀 이동
+              posAttr.setXYZ(i, pt.x * scaleFactor, pt.y * scaleFactor, pt.z * scaleFactor);
+
+              const sig = pt.phase * temporal; //[cite: 1]
+              const intensity = Math.abs(sig); //[cite: 1]
+
+              if (intensity > 0.05) { //[cite: 1]
+                const is_phase_a = (sig > 0.0); //[cite: 1]
+                let baseCol = is_phase_a ? cur_set.a : cur_set.b; //[cite: 1]
+
+                if (params.grayscale) { //[cite: 1]
+                  const y = 0.2126 * baseCol[0] + 0.7152 * baseCol[1] + 0.0722 * baseCol[2]; //[cite: 1]
+                  baseCol = [y, y, y]; //[cite: 1]
+                }
+
+                let applyMetal = false; //[cite: 1]
+                if (is_metal === true) applyMetal = true; //[cite: 1]
+                else if (is_metal === "hybrid" && is_phase_a) applyMetal = true; //[cite: 1]
+
+                let r, g, b;
+                if (applyMetal) { //[cite: 1]
+                  const specular = Math.pow(intensity, 4.0); //[cite: 1]
+                  const glint = Math.sin(elapsed * 4.0 + pt.seed * 6.28) * 0.5 + 0.5; //[cite: 1]
+                  const boost = specular * glint * 1.5; //[cite: 1]
+
+                  const br = baseCol[0] * intensity; //[cite: 1]
+                  const bg = baseCol[1] * intensity; //[cite: 1]
+                  const bb = baseCol[2] * intensity; //[cite: 1]
+
+                  r = Math.min(1.0, br + (1.0 - br) * (specular * 0.85 + boost * 0.35)); //[cite: 1]
+                  g = Math.min(1.0, bg + (1.0 - bg) * (specular * 0.80 + boost * 0.35)); //[cite: 1]
+                  b = Math.min(1.0, bb + (0.95 - bb) * (specular * 0.65 + boost * 0.25)); //[cite: 1]
+                } else {
+                  r = baseCol[0] * intensity; //[cite: 1]
+                  g = baseCol[1] * intensity; //[cite: 1]
+                  b = baseCol[2] * intensity; //[cite: 1]
+                }
+                colAttr.setXYZ(i, r, g, b); //[cite: 1]
+              } else {
+                colAttr.setXYZ(i, 0, 0, 0); //[cite: 1]
+              }
+            } else {
+              colAttr.setXYZ(i, 0, 0, 0); //[cite: 1]
+            }
+          }
+        }
+        posAttr.needsUpdate = true; //[cite: 1]
+        colAttr.needsUpdate = true; //[cite: 1]
+      }
+
+      renderer.render(scene, camera); //[cite: 1]
+    });
+
+    // ---------------- 10. UI 이벤트 바인딩 ----------------
+    function initUI() {
+      createButtonGroup('pulse-speed-group', [4.0, 6.0, 8.0, 12.0], params.pulse_period, '초', (v) => {
+        params.pulse_period = v;
+      });
+
+      document.getElementById('slider-off').addEventListener('input', (e) => { //[cite: 1]
+        params.off_duration = parseFloat(e.target.value); //[cite: 1]
+        document.getElementById('txt-off').innerText = params.off_duration.toFixed(1) + '초'; //[cite: 1]
+      });
+
+      document.getElementById('slider-radius').addEventListener('input', (e) => { //[cite: 1]
+        params.dome_radius = parseFloat(e.target.value); //[cite: 1]
+        document.getElementById('txt-radius').innerText = params.dome_radius.toFixed(0) + 'm'; //[cite: 1]
+        buildDome(); //[cite: 1]
+      });
+      document.getElementById('slider-bg').addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        params.snow_brightness = val / 100.0;
+        document.getElementById('txt-bg').innerText = val + '%';
+        buildDome();
+      });
+
+      const d1 = document.getElementById('group-dark-1'); //[cite: 1]
+      const d2 = document.getElementById('group-dark-2'); //[cite: 1]
+      for (let i = 1; i <= 5; i++) d1.appendChild(createThemeBtn(i)); //[cite: 1]
+      for (let i = 6; i <= 10; i++) d2.appendChild(createThemeBtn(i)); //[cite: 1]
+
+      const wa1 = document.getElementById('group-wha-1'); //[cite: 1]
+      const wa2 = document.getElementById('group-wha-2'); //[cite: 1]
+      for (let i = 11; i <= 13; i++) wa1.appendChild(createThemeBtn(i)); //[cite: 1]
+      for (let i = 14; i <= 16; i++) wa2.appendChild(createThemeBtn(i)); //[cite: 1]
+
+      const wb1 = document.getElementById('group-whb-1'); //[cite: 1]
+      const wb2 = document.getElementById('group-whb-2'); //[cite: 1]
+      wb1.appendChild(createThemeBtn(17)); //[cite: 1]
+      wb1.appendChild(createThemeBtn(18)); //[cite: 1]
+      wb2.appendChild(createThemeBtn(19)); //[cite: 1]
+      wb2.appendChild(createThemeBtn(20)); //[cite: 1]
+
+      createButtonGroup('p1-blur-group', [0.1, 0.2, 0.3, 0.4, 0.5], params.p1_blur, '%', (v) => { //[cite: 1]
+        params.p1_blur = v; //[cite: 1]
+        updateP1Title(); //[cite: 1]
+        rebuildParticles(); //[cite: 1]
+      });
+      createButtonGroup('p1-freq-group', [0.5, 1.0, 1.5, 2.0], params.p1_freq, 'Hz', (v) => { //[cite: 1]
+        params.p1_freq = v; //[cite: 1]
+        updateP1Title(); //[cite: 1]
+      });
+      createButtonGroup('p1-count-group', [1, 2, 3, 4], params.p1_count, '회', (v) => { //[cite: 1]
+        params.p1_count = v; //[cite: 1]
+        updateP1Title(); //[cite: 1]
+      });
+
+      createButtonGroup('p2-blur-group', [0.3, 0.4, 0.5, 0.6, 0.8], params.p2_blur, '%', (v) => { //[cite: 1]
+        params.p2_blur = v; //[cite: 1]
+        updateP2Title(); //[cite: 1]
+        rebuildParticles(); //[cite: 1]
+      });
+      createButtonGroup('p2-freq-group', [1.5, 2.0, 2.5, 3.0], params.p2_freq, 'Hz', (v) => { //[cite: 1]
+        params.p2_freq = v; //[cite: 1]
+        updateP2Title(); //[cite: 1]
+      });
+      createButtonGroup('p2-count-group', [3, 4, 5, 6], params.p2_count, '회', (v) => { //[cite: 1]
+        params.p2_count = v; //[cite: 1]
+        updateP2Title(); //[cite: 1]
+      });
+
+      const s1 = document.getElementById('sharp-group-1'); //[cite: 1]
+      const s2 = document.getElementById('sharp-group-2'); //[cite: 1]
+      for (let i = 1; i <= 3; i++) s1.appendChild(createSharpBtn(i)); //[cite: 1]
+      for (let i = 4; i <= 6; i++) s2.appendChild(createSharpBtn(i)); //[cite: 1]
+    }
+
+    function togglePulse() {
+      params.pulse_active = !params.pulse_active;
+      const b = document.getElementById('btn-pulse-toggle');
+      b.innerText = `원근 왕복 모드: ${params.pulse_active ? '켜짐' : '꺼짐'}`;
+      b.className = params.pulse_active ? 'active' : '';
+    }
+
+    function createThemeBtn(idx) { //[cite: 1]
+      const b = document.createElement('button'); //[cite: 1]
+      b.id = `btn-theme-${idx}`; //[cite: 1]
+      b.innerText = COLOR_SETS[idx].name; //[cite: 1]
+      if (idx === params.color_set) b.className = 'active'; //[cite: 1]
+      b.onclick = () => { //[cite: 1]
+        params.color_set = idx; //[cite: 1]
+        document.querySelectorAll('[id^=btn-theme-]').forEach(el => el.classList.remove('active')); //[cite: 1]
+        b.classList.add('active'); //[cite: 1]
+      };
+      return b; //[cite: 1]
+    }
+
+    function createButtonGroup(containerId, values, currentVal, unit, onChange) { //[cite: 1]
+      const box = document.getElementById(containerId); //[cite: 1]
+      values.forEach(v => { //[cite: 1]
+        const b = document.createElement('button'); //[cite: 1]
+        b.innerText = v + unit; //[cite: 1]
+        if (v === currentVal) b.className = 'active'; //[cite: 1]
+        b.onclick = () => { //[cite: 1]
+          box.querySelectorAll('button').forEach(el => el.classList.remove('active')); //[cite: 1]
+          b.classList.add('active'); //[cite: 1]
+          onChange(v); //[cite: 1]
+        };
+        box.appendChild(b); //[cite: 1]
+      });
+    }
+
+    function createSharpBtn(lvl) { //[cite: 1]
+      const b = document.createElement('button'); //[cite: 1]
+      b.id = `btn-sharp-${lvl}`; //[cite: 1]
+      b.innerText = `${lvl}단계`; //[cite: 1]
+      if (lvl === params.sharpness) b.className = 'active'; //[cite: 1]
+      b.onclick = () => { //[cite: 1]
+        params.sharpness = lvl; //[cite: 1]
+        document.querySelectorAll('[id^=btn-sharp-]').forEach(el => el.classList.remove('active')); //[cite: 1]
+        b.classList.add('active'); //[cite: 1]
+        document.getElementById('sharpness-title').innerText = `선명도 격차: ${SHARP_LEVELS[lvl]}`; //[cite: 1]
+      };
+      return b; //[cite: 1]
+    }
+
+    function updateP1Title() { //[cite: 1]
+      document.getElementById('p1-header-title').innerText = //[cite: 1]
+        `● 1단계(전반부) 프라이밍: ${params.p1_blur}% | ${params.p1_freq.toFixed(1)}Hz | ${params.p1_count}회 깜빡임`; //[cite: 1]
+    }
+
+    function updateP2Title() { //[cite: 1]
+      document.getElementById('p2-header-title').innerText = //[cite: 1]
+        `★ 2단계(후반부) 고속 버스트: ${params.p2_blur}% | ${params.p2_freq.toFixed(1)}Hz | ${params.p2_count}회 깜빡임`; //[cite: 1]
+    }
+
+    function setDominantEye(eye) { //[cite: 1]
+      params.dominant_eye = eye; //[cite: 1]
+      document.getElementById('btn-eye-left').className = (eye === 'left') ? 'active' : ''; //[cite: 1]
+      document.getElementById('btn-eye-right').className = (eye === 'right') ? 'active' : ''; //[cite: 1]
+    }
+
+    function toggleGrayscale() { //[cite: 1]
+      params.grayscale = !params.grayscale; //[cite: 1]
+      const btn = document.getElementById('btn-grayscale'); //[cite: 1]
+      btn.innerText = `Rec.709 흑백(Grayscale) 모드: ${params.grayscale ? '켜짐' : '꺼짐'}`; //[cite: 1]
+      btn.className = params.grayscale ? 'active' : ''; //[cite: 1]
+    }
+
+    initUI(); //[cite: 1]
+
+    window.addEventListener('resize', () => { //[cite: 1]
+      camera.aspect = window.innerWidth / window.innerHeight; //[cite: 1]
+      camera.updateProjectionMatrix(); //[cite: 1]
+      renderer.setSize(window.innerWidth, window.innerHeight); //[cite: 1]
+    });
+  </script>
+</body>
+</html>
